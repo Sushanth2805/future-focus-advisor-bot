@@ -7,25 +7,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Function to clean markdown formatting
-const cleanMarkdown = (text: string): string => {
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold formatting
-    .replace(/\*(.*?)\*/g, '$1')     // Remove italic formatting
-    .replace(/^\* /gm, '• ')         // Replace bullet points
-    .replace(/^# (.*$)/gm, '$1')     // Remove heading markers
-    .replace(/^## (.*$)/gm, '$1')    // Remove subheading markers
-    .replace(/^### (.*$)/gm, '$1')   // Remove sub-subheading markers
-    .trim();
-};
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { message, conversationHistory, generateAudio } = await req.json();
+    const { message, conversationHistory } = await req.json();
     const apiKey = Deno.env.get('GEMINI_API_KEY');
 
     if (!apiKey) {
@@ -45,9 +33,7 @@ serve(async (req) => {
 5. Be encouraging and supportive while being realistic about career prospects
 6. Focus on actionable guidance they can implement
 
-Keep your responses conversational, helpful, and focused on career development. Ask follow-up questions to better understand their situation. 
-
-IMPORTANT: Do not use markdown formatting like asterisks (*) or hashtags (#). Write in clean, plain text format.`
+Keep your responses conversational, helpful, and focused on career development. Ask follow-up questions to better understand their situation.`
       }]
     };
 
@@ -60,7 +46,7 @@ IMPORTANT: Do not use markdown formatting like asterisks (*) or hashtags (#). Wr
       }
     ];
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -83,47 +69,10 @@ IMPORTANT: Do not use markdown formatting like asterisks (*) or hashtags (#). Wr
     }
 
     const data = await response.json();
-    let aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 
-                    "I'm sorry, I couldn't generate a response. Please try again.";
+    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 
+                     "I'm sorry, I couldn't generate a response. Please try again.";
 
-    // Clean the response from markdown formatting
-    aiResponse = cleanMarkdown(aiResponse);
-
-    const responseData: any = { response: aiResponse };
-
-    // Generate audio if requested
-    if (generateAudio) {
-      try {
-        const audioResponse = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            input: { text: aiResponse },
-            voice: {
-              languageCode: 'en-US',
-              name: 'en-US-Neural2-F',
-              ssmlGender: 'FEMALE'
-            },
-            audioConfig: {
-              audioEncoding: 'MP3'
-            }
-          }),
-        });
-
-        if (audioResponse.ok) {
-          const audioData = await audioResponse.json();
-          responseData.audioContent = audioData.audioContent;
-        } else {
-          console.error('Text-to-speech error:', await audioResponse.text());
-        }
-      } catch (audioError) {
-        console.error('Audio generation error:', audioError);
-      }
-    }
-
-    return new Response(JSON.stringify(responseData), {
+    return new Response(JSON.stringify({ response: aiResponse }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

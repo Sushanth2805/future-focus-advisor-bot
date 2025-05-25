@@ -29,8 +29,9 @@ const WelcomeScreen = ({ onStartVoice, onStartOptions }: WelcomeScreenProps) => 
   };
 
   const handleStartChat = () => {
-    window.open('https://dream2-theta.vercel.app/', '_blank');
-  };
+  window.location.href = 'https://dream2-theta.vercel.app/';
+};
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 flex items-center justify-center p-4">

@@ -27,52 +27,110 @@ Deno.serve(async (req) => {
       })
     }
 
-    const client = new MongoClient()
-    await client.connect(Deno.env.get('MONGODB_CONNECTION_STRING')!)
-    const db = client.database('career_counselor')
-    
-    const assessments = db.collection('assessments')
-    const chatSessions = db.collection('chat_sessions')
-    const learningProgress = db.collection('learning_progress')
+    console.log('User authenticated:', user.id)
 
-    // Get latest assessment
-    const latestAssessment = await assessments.findOne(
-      { userId: user.id },
-      { sort: { createdAt: -1 } }
-    )
+    // Initialize with fallback data
+    let userData = {
+      latestAssessment: null,
+      stats: {
+        assessmentCount: 0,
+        chatSessionCount: 0,
+        resourcesViewedCount: 0
+      }
+    }
 
-    // Get assessment count
-    const assessmentCount = await assessments.countDocuments({ userId: user.id })
+    const connectionString = Deno.env.get('MONGODB_CONNECTION_STRING')
+    if (!connectionString) {
+      console.log('MongoDB connection string not found, returning fallback data')
+      return new Response(JSON.stringify(userData), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
-    // Get chat session count
-    const chatSessionCount = await chatSessions.countDocuments({ userId: user.id })
+    let client
+    try {
+      client = new MongoClient()
+      console.log('Attempting to connect to MongoDB...')
+      await client.connect(connectionString)
+      console.log('MongoDB connected successfully')
+      
+      const db = client.database('career_counselor')
+      const assessments = db.collection('assessments')
+      const chatSessions = db.collection('chat_sessions')
+      const learningProgress = db.collection('learning_progress')
 
-    // Get learning progress count
-    const resourcesViewedCount = await learningProgress.countDocuments({ userId: user.id })
-
-    await client.close()
-
-    return new Response(
-      JSON.stringify({ 
-        latestAssessment,
-        stats: {
-          assessmentCount,
-          chatSessionCount,
-          resourcesViewedCount
+      // Get latest assessment
+      try {
+        const latestAssessment = await assessments.findOne(
+          { userId: user.id },
+          { sort: { createdAt: -1 } }
+        )
+        if (latestAssessment) {
+          userData.latestAssessment = latestAssessment
         }
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        console.log('Latest assessment retrieved')
+      } catch (error) {
+        console.error('Error fetching latest assessment:', error)
       }
-    )
+
+      // Get stats with individual error handling
+      try {
+        const assessmentCount = await assessments.countDocuments({ userId: user.id })
+        userData.stats.assessmentCount = assessmentCount
+        console.log('Assessment count:', assessmentCount)
+      } catch (error) {
+        console.error('Error counting assessments:', error)
+      }
+
+      try {
+        const chatSessionCount = await chatSessions.countDocuments({ userId: user.id })
+        userData.stats.chatSessionCount = chatSessionCount
+        console.log('Chat session count:', chatSessionCount)
+      } catch (error) {
+        console.error('Error counting chat sessions:', error)
+      }
+
+      try {
+        const resourcesViewedCount = await learningProgress.countDocuments({ userId: user.id })
+        userData.stats.resourcesViewedCount = resourcesViewedCount
+        console.log('Resources viewed count:', resourcesViewedCount)
+      } catch (error) {
+        console.error('Error counting learning progress:', error)
+      }
+
+    } catch (mongoError) {
+      console.error('MongoDB connection/operation error:', mongoError)
+      // Continue with fallback data instead of throwing
+    } finally {
+      if (client) {
+        try {
+          await client.close()
+          console.log('MongoDB connection closed')
+        } catch (closeError) {
+          console.error('Error closing MongoDB connection:', closeError)
+        }
+      }
+    }
+
+    return new Response(JSON.stringify(userData), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+
   } catch (error) {
-    console.error('Error fetching user data:', error)
-    return new Response(
-      JSON.stringify({ error: 'Failed to fetch user data' }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    console.error('General error in get-user-data function:', error)
+    
+    // Return fallback data instead of error
+    const fallbackData = {
+      latestAssessment: null,
+      stats: {
+        assessmentCount: 0,
+        chatSessionCount: 0,
+        resourcesViewedCount: 0
       }
-    )
+    }
+
+    return new Response(JSON.stringify(fallbackData), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 })

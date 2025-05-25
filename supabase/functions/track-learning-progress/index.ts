@@ -28,47 +28,72 @@ Deno.serve(async (req) => {
     }
 
     const { resourceId, resourceType, title, url, completed } = await req.json()
+    console.log('Tracking learning progress for user:', user.id)
 
-    const client = new MongoClient()
-    await client.connect(Deno.env.get('MONGODB_CONNECTION_STRING')!)
-    const db = client.database('career_counselor')
-    const learningProgress = db.collection('learning_progress')
-
-    const progressData = {
-      userId: user.id,
-      userEmail: user.email,
-      resourceId,
-      resourceType,
-      title,
-      url,
-      completed: completed || false,
-      viewedAt: new Date(),
-      updatedAt: new Date()
-    }
-
-    // Upsert the progress
-    await learningProgress.replaceOne(
-      { userId: user.id, resourceId },
-      progressData,
-      { upsert: true }
-    )
-    
-    await client.close()
-
-    return new Response(
-      JSON.stringify({ success: true }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    )
-  } catch (error) {
-    console.error('Error tracking learning progress:', error)
-    return new Response(
-      JSON.stringify({ error: 'Failed to track learning progress' }),
-      {
+    const connectionString = Deno.env.get('MONGODB_CONNECTION_STRING')
+    if (!connectionString) {
+      console.error('MongoDB connection string not found')
+      return new Response(JSON.stringify({ error: 'Database configuration error' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    let client
+    try {
+      client = new MongoClient()
+      await client.connect(connectionString)
+      console.log('MongoDB connected for learning progress tracking')
+      
+      const db = client.database('career_counselor')
+      const learningProgress = db.collection('learning_progress')
+
+      const progressData = {
+        userId: user.id,
+        userEmail: user.email,
+        resourceId,
+        resourceType,
+        title,
+        url,
+        completed: completed || false,
+        viewedAt: new Date(),
+        updatedAt: new Date()
       }
-    )
+
+      // Upsert the progress
+      await learningProgress.replaceOne(
+        { userId: user.id, resourceId },
+        progressData,
+        { upsert: true }
+      )
+      
+      console.log('Learning progress tracked for resource:', resourceId)
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+
+    } catch (mongoError) {
+      console.error('MongoDB error during learning progress tracking:', mongoError)
+      return new Response(JSON.stringify({ error: 'Failed to track learning progress' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    } finally {
+      if (client) {
+        try {
+          await client.close()
+        } catch (closeError) {
+          console.error('Error closing MongoDB connection:', closeError)
+        }
+      }
+    }
+
+  } catch (error) {
+    console.error('Error tracking learning progress:', error)
+    return new Response(JSON.stringify({ error: 'Failed to track learning progress' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 })

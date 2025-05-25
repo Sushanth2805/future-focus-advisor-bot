@@ -28,44 +28,68 @@ Deno.serve(async (req) => {
     }
 
     const { answers, careerPath } = await req.json()
+    console.log('Saving assessment for user:', user.id)
 
-    const client = new MongoClient()
-    await client.connect(Deno.env.get('MONGODB_CONNECTION_STRING')!)
-    const db = client.database('career_counselor')
-    const assessments = db.collection('assessments')
-
-    const assessmentData = {
-      userId: user.id,
-      userEmail: user.email,
-      answers,
-      careerPath,
-      timestamp: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date()
+    const connectionString = Deno.env.get('MONGODB_CONNECTION_STRING')
+    if (!connectionString) {
+      console.error('MongoDB connection string not found')
+      return new Response(JSON.stringify({ error: 'Database configuration error' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
-    const result = await assessments.insertOne(assessmentData)
-    
-    await client.close()
+    let client
+    try {
+      client = new MongoClient()
+      await client.connect(connectionString)
+      console.log('MongoDB connected for assessment save')
+      
+      const db = client.database('career_counselor')
+      const assessments = db.collection('assessments')
 
-    return new Response(
-      JSON.stringify({ 
+      const assessmentData = {
+        userId: user.id,
+        userEmail: user.email,
+        answers,
+        careerPath,
+        timestamp: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+
+      const result = await assessments.insertOne(assessmentData)
+      console.log('Assessment saved with ID:', result)
+      
+      return new Response(JSON.stringify({ 
         success: true, 
         assessmentId: result.toString(),
         data: assessmentData 
-      }),
-      {
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    )
-  } catch (error) {
-    console.error('Error saving assessment:', error)
-    return new Response(
-      JSON.stringify({ error: 'Failed to save assessment' }),
-      {
+      })
+
+    } catch (mongoError) {
+      console.error('MongoDB error during assessment save:', mongoError)
+      return new Response(JSON.stringify({ error: 'Failed to save assessment to database' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    } finally {
+      if (client) {
+        try {
+          await client.close()
+        } catch (closeError) {
+          console.error('Error closing MongoDB connection:', closeError)
+        }
       }
-    )
+    }
+
+  } catch (error) {
+    console.error('Error saving assessment:', error)
+    return new Response(JSON.stringify({ error: 'Failed to save assessment' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 })

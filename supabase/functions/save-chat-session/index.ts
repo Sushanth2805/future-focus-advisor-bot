@@ -28,47 +28,72 @@ Deno.serve(async (req) => {
     }
 
     const { messages, sessionId } = await req.json()
+    console.log('Saving chat session for user:', user.id)
 
-    const client = new MongoClient()
-    await client.connect(Deno.env.get('MONGODB_CONNECTION_STRING')!)
-    const db = client.database('career_counselor')
-    const chatSessions = db.collection('chat_sessions')
-
-    const sessionData = {
-      sessionId: sessionId || crypto.randomUUID(),
-      userId: user.id,
-      userEmail: user.email,
-      messages,
-      timestamp: new Date(),
-      updatedAt: new Date()
-    }
-
-    // Upsert the session
-    await chatSessions.replaceOne(
-      { sessionId: sessionData.sessionId },
-      sessionData,
-      { upsert: true }
-    )
-    
-    await client.close()
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        sessionId: sessionData.sessionId 
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    )
-  } catch (error) {
-    console.error('Error saving chat session:', error)
-    return new Response(
-      JSON.stringify({ error: 'Failed to save chat session' }),
-      {
+    const connectionString = Deno.env.get('MONGODB_CONNECTION_STRING')
+    if (!connectionString) {
+      console.error('MongoDB connection string not found')
+      return new Response(JSON.stringify({ error: 'Database configuration error' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    let client
+    try {
+      client = new MongoClient()
+      await client.connect(connectionString)
+      console.log('MongoDB connected for chat session save')
+      
+      const db = client.database('career_counselor')
+      const chatSessions = db.collection('chat_sessions')
+
+      const sessionData = {
+        sessionId: sessionId || crypto.randomUUID(),
+        userId: user.id,
+        userEmail: user.email,
+        messages,
+        timestamp: new Date(),
+        updatedAt: new Date()
       }
-    )
+
+      // Upsert the session
+      await chatSessions.replaceOne(
+        { sessionId: sessionData.sessionId },
+        sessionData,
+        { upsert: true }
+      )
+      
+      console.log('Chat session saved:', sessionData.sessionId)
+
+      return new Response(JSON.stringify({ 
+        success: true, 
+        sessionId: sessionData.sessionId 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+
+    } catch (mongoError) {
+      console.error('MongoDB error during chat session save:', mongoError)
+      return new Response(JSON.stringify({ error: 'Failed to save chat session to database' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    } finally {
+      if (client) {
+        try {
+          await client.close()
+        } catch (closeError) {
+          console.error('Error closing MongoDB connection:', closeError)
+        }
+      }
+    }
+
+  } catch (error) {
+    console.error('Error saving chat session:', error)
+    return new Response(JSON.stringify({ error: 'Failed to save chat session' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 })

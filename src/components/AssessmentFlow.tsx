@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import VoiceInterface from './VoiceInterface';
 
 interface AssessmentFlowProps {
   onComplete: (responses: Record<string, any>) => void;
@@ -13,7 +13,8 @@ const questions = [
   {
     id: 'interests',
     title: 'What are your main interests?',
-    subtitle: 'Select all that apply to you',
+    subtitle: 'Tell me about what excites you most',
+    voicePrompt: 'What are you most passionate about? What activities or topics make you lose track of time?',
     type: 'multiple',
     options: [
       'Technology & Programming',
@@ -30,6 +31,7 @@ const questions = [
     id: 'strengths',
     title: 'What are your key strengths?',
     subtitle: 'Choose your top 3 strengths',
+    voicePrompt: 'What would your friends and colleagues say you are really good at? What comes naturally to you?',
     type: 'multiple',
     maxSelections: 3,
     options: [
@@ -47,6 +49,7 @@ const questions = [
     id: 'workStyle',
     title: 'What work environment do you prefer?',
     subtitle: 'Select your preferred work style',
+    voicePrompt: 'Where do you do your best work? Do you prefer working with others or independently?',
     type: 'single',
     options: [
       'Remote work with flexibility',
@@ -59,6 +62,7 @@ const questions = [
     id: 'experience',
     title: 'What\'s your current experience level?',
     subtitle: 'This helps us tailor our recommendations',
+    voicePrompt: 'Tell me about your background. Are you just starting out or looking to make a career change?',
     type: 'single',
     options: [
       'Complete beginner',
@@ -71,6 +75,7 @@ const questions = [
     id: 'goals',
     title: 'What are your career goals?',
     subtitle: 'What do you hope to achieve?',
+    voicePrompt: 'What does career success look like to you? What are your priorities?',
     type: 'multiple',
     options: [
       'High earning potential',
@@ -91,6 +96,29 @@ const AssessmentFlow = ({ onComplete }: AssessmentFlowProps) => {
 
   const question = questions[currentQuestion];
   const progress = ((currentQuestion + 1) / questions.length) * 100;
+
+  const handleVoiceTranscript = (text: string) => {
+    // Simple voice response processing
+    const questionId = question.id;
+    
+    if (question.type === 'single') {
+      // Find the best matching option
+      const matchedOption = question.options.find(option => 
+        text.toLowerCase().includes(option.toLowerCase().split(' ')[0].toLowerCase())
+      );
+      if (matchedOption) {
+        setResponses(prev => ({ ...prev, [questionId]: matchedOption }));
+      }
+    } else {
+      // For multiple choice, look for keywords
+      const matches = question.options.filter(option =>
+        text.toLowerCase().includes(option.toLowerCase().split(' ')[0].toLowerCase())
+      );
+      if (matches.length > 0) {
+        setResponses(prev => ({ ...prev, [questionId]: matches }));
+      }
+    }
+  };
 
   const handleOptionSelect = (option: string) => {
     const questionId = question.id;
@@ -167,10 +195,16 @@ const AssessmentFlow = ({ onComplete }: AssessmentFlowProps) => {
         </div>
 
         <Card className="p-8 bg-white/80 backdrop-blur-sm border-0 shadow-xl">
-          <div className="mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
-              {question.title}
-            </h2>
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+                {question.title}
+              </h2>
+              <VoiceInterface 
+                textToSpeak={question.voicePrompt}
+                onTranscript={handleVoiceTranscript}
+              />
+            </div>
             <p className="text-gray-600">
               {question.subtitle}
             </p>

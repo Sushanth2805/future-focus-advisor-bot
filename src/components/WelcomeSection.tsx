@@ -1,14 +1,16 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Sparkles, Target, Users, TrendingUp } from 'lucide-react';
+import { Sparkles, Target, Users, TrendingUp, Mic } from 'lucide-react';
+import VoiceInterface from './VoiceInterface';
 
 interface WelcomeSectionProps {
   onStart: () => void;
 }
 
 const WelcomeSection = ({ onStart }: WelcomeSectionProps) => {
+  const welcomeText = "Welcome to CareerGuide GPT! I'm your AI career counselor, ready to help you discover the perfect career path. We'll have a quick conversation about your interests and goals.";
+
   return (
     <div className="container mx-auto px-4 py-8 min-h-screen flex items-center">
       <div className="w-full max-w-4xl mx-auto">
@@ -22,21 +24,28 @@ const WelcomeSection = ({ onStart }: WelcomeSectionProps) => {
             CareerGuide GPT
           </h1>
           <p className="text-xl md:text-2xl text-gray-700 mb-4 max-w-3xl mx-auto leading-relaxed">
-            Your AI-powered career counselor that helps you discover the perfect career path
+            Your AI-powered career counselor with voice interaction
           </p>
-          <p className="text-lg text-gray-600 mb-8">
-            Answer a few questions and get personalized career recommendations with skills roadmaps
+          <p className="text-lg text-gray-600 mb-6">
+            Speak naturally or click through our assessment to get personalized career recommendations
           </p>
+          
+          <div className="flex justify-center mb-8">
+            <VoiceInterface 
+              textToSpeak={welcomeText}
+              className="bg-blue-50 px-4 py-2 rounded-full"
+            />
+          </div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 mb-12">
           <Card className="p-6 text-center hover:shadow-lg transition-all duration-300 hover:-translate-y-1 bg-white/70 backdrop-blur-sm border-0">
             <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <Target className="w-6 h-6 text-white" />
+              <Mic className="w-6 h-6 text-white" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">Personalized Assessment</h3>
+            <h3 className="text-lg font-semibold mb-2">Voice Interaction</h3>
             <p className="text-gray-600 text-sm">
-              Quick 5-question assessment tailored to your interests and goals
+              Speak naturally or type your responses - your choice!
             </p>
           </Card>
 
@@ -71,7 +80,7 @@ const WelcomeSection = ({ onStart }: WelcomeSectionProps) => {
             <Sparkles className="ml-2 w-5 h-5" />
           </Button>
           <p className="text-sm text-gray-500 mt-4">
-            Takes about 3 minutes • 100% Free
+            Takes about 3 minutes • Voice & Text Enabled • 100% Free
           </p>
         </div>
       </div>

@@ -1,39 +1,64 @@
 
 import React, { useState } from 'react';
-import WelcomeSection from '../components/WelcomeSection';
-import AssessmentFlow from '../components/AssessmentFlow';
-import CareerResults from '../components/CareerResults';
+import AuthProvider from '@/components/AuthProvider';
+import WelcomeScreen from '@/components/WelcomeScreen';
+import VoiceAssessment from '@/components/VoiceAssessment';
+import OptionAssessment from '@/components/OptionAssessment';
+import CareerResults from '@/components/CareerResults';
+
+type AppMode = 'welcome' | 'voice-assessment' | 'option-assessment' | 'results';
 
 const Index = () => {
-  const [currentStep, setCurrentStep] = useState<'welcome' | 'assessment' | 'results'>('welcome');
-  const [userResponses, setUserResponses] = useState<Record<string, any>>({});
+  const [currentMode, setCurrentMode] = useState<AppMode>('welcome');
+  const [assessmentResults, setAssessmentResults] = useState<Record<string, any>>({});
 
-  const handleStartAssessment = () => {
-    setCurrentStep('assessment');
-  };
-
-  const handleAssessmentComplete = (responses: Record<string, any>) => {
-    setUserResponses(responses);
-    setCurrentStep('results');
+  const handleStartVoice = () => setCurrentMode('voice-assessment');
+  const handleStartOptions = () => setCurrentMode('option-assessment');
+  
+  const handleAssessmentComplete = (results: Record<string, any>) => {
+    setAssessmentResults(results);
+    setCurrentMode('results');
   };
 
   const handleRestart = () => {
-    setCurrentStep('welcome');
-    setUserResponses({});
+    setCurrentMode('welcome');
+    setAssessmentResults({});
   };
 
+  const handleBackToWelcome = () => setCurrentMode('welcome');
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100">
-      {currentStep === 'welcome' && (
-        <WelcomeSection onStart={handleStartAssessment} />
-      )}
-      {currentStep === 'assessment' && (
-        <AssessmentFlow onComplete={handleAssessmentComplete} />
-      )}
-      {currentStep === 'results' && (
-        <CareerResults responses={userResponses} onRestart={handleRestart} />
-      )}
-    </div>
+    <AuthProvider>
+      <div className="min-h-screen">
+        {currentMode === 'welcome' && (
+          <WelcomeScreen 
+            onStartVoice={handleStartVoice}
+            onStartOptions={handleStartOptions}
+          />
+        )}
+        
+        {currentMode === 'voice-assessment' && (
+          <VoiceAssessment 
+            onComplete={handleAssessmentComplete}
+            onBack={handleBackToWelcome}
+          />
+        )}
+        
+        {currentMode === 'option-assessment' && (
+          <OptionAssessment 
+            onComplete={handleAssessmentComplete}
+            onBack={handleBackToWelcome}
+          />
+        )}
+        
+        {currentMode === 'results' && (
+          <CareerResults 
+            responses={assessmentResults}
+            onRestart={handleRestart}
+          />
+        )}
+      </div>
+    </AuthProvider>
   );
 };
 

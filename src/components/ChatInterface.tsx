@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Send, Bot, User } from 'lucide-react';
+import { ArrowLeft, Send, Bot, User, Volume2, VolumeX } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
@@ -11,6 +11,7 @@ interface Message {
   content: string;
   sender: 'user' | 'ai';
   timestamp: Date;
+  audioContent?: string;
 }
 
 interface ChatInterfaceProps {
@@ -28,7 +29,10 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -37,6 +41,38 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const playAudio = (audioContent: string, messageId: string) => {
+    if (currentlyPlaying === messageId) {
+      // Stop current audio
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      setCurrentlyPlaying(null);
+      return;
+    }
+
+    try {
+      const audioBlob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], {
+        type: 'audio/mp3'
+      });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      if (audioRef.current) {
+        audioRef.current.src = audioUrl;
+        audioRef.current.play();
+        setCurrentlyPlaying(messageId);
+        
+        audioRef.current.onended = () => {
+          setCurrentlyPlaying(null);
+          URL.revokeObjectURL(audioUrl);
+        };
+      }
+    } catch (error) {
+      console.error('Error playing audio:', error);
+    }
+  };
 
   const sendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -59,7 +95,8 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
           conversationHistory: messages.map(msg => ({
             role: msg.sender === 'user' ? 'user' : 'model',
             parts: [{ text: msg.content }]
-          }))
+          })),
+          generateAudio: voiceEnabled
         },
       });
 
@@ -72,7 +109,8 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
         id: (Date.now() + 1).toString(),
         content: data.response || "I'm sorry, I couldn't generate a response. Please try again.",
         sender: 'ai',
-        timestamp: new Date()
+        timestamp: new Date(),
+        audioContent: data.audioContent
       };
 
       setMessages(prev => [...prev, aiMessage]);
@@ -101,25 +139,37 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 flex flex-col">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 px-4 py-4">
-        <div className="max-w-4xl mx-auto flex items-center space-x-4">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={onBack}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Dashboard</span>
-          </Button>
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
-              <Bot className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold">AI Career Counselor</h1>
-              <p className="text-sm text-gray-600">Online</p>
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={onBack}
+              className="flex items-center space-x-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Dashboard</span>
+            </Button>
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
+                <Bot className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold">AI Career Counselor</h1>
+                <p className="text-sm text-gray-600">Online</p>
+              </div>
             </div>
           </div>
+          
+          <Button
+            variant={voiceEnabled ? "default" : "outline"}
+            size="sm"
+            onClick={() => setVoiceEnabled(!voiceEnabled)}
+            className="flex items-center space-x-2"
+          >
+            {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            <span>{voiceEnabled ? 'Voice On' : 'Voice Off'}</span>
+          </Button>
         </div>
       </div>
 
@@ -149,11 +199,27 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
                     : 'bg-white/80 backdrop-blur-sm'
                 }`}>
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  <p className={`text-xs mt-2 ${
-                    message.sender === 'user' ? 'text-blue-100' : 'text-gray-500'
-                  }`}>
-                    {message.timestamp.toLocaleTimeString()}
-                  </p>
+                  <div className="flex items-center justify-between mt-2">
+                    <p className={`text-xs ${
+                      message.sender === 'user' ? 'text-blue-100' : 'text-gray-500'
+                    }`}>
+                      {message.timestamp.toLocaleTimeString()}
+                    </p>
+                    {message.sender === 'ai' && message.audioContent && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => playAudio(message.audioContent!, message.id)}
+                        className="p-1 h-6 w-6"
+                      >
+                        {currentlyPlaying === message.id ? (
+                          <VolumeX className="w-3 h-3" />
+                        ) : (
+                          <Volume2 className="w-3 h-3" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </Card>
               </div>
             </div>
@@ -199,6 +265,8 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
           </Button>
         </div>
       </div>
+
+      <audio ref={audioRef} className="hidden" />
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -29,9 +28,8 @@ const WelcomeScreen = ({ onStartVoice, onStartOptions }: WelcomeScreenProps) => 
   };
 
   const handleStartChat = () => {
-  window.location.href = 'https://dream2-theta.vercel.app/';
-};
-
+    window.location.href = 'https://dream2-theta.vercel.app/';
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 flex items-center justify-center p-4">
@@ -122,16 +120,15 @@ const WelcomeScreen = ({ onStartVoice, onStartOptions }: WelcomeScreenProps) => 
               Have an open conversation with our AI career counselor. Ask questions freely.
             </p>
             
-      <Button>
-        onClick={() => window.location.href = 'https://dream2-theta.vercel.app/'}
-        className="w-full bg-gradient-to-r from-indigo-500 to-cyan-600 hover:from-indigo-600 hover:to-cyan-700"
-        size="lg"
-      
-        <MessageSquare className="w-5 h-5 mr-2" />
-        Start Chat
-        <ArrowRight className="w-5 h-5 ml-2" />
-      </Button>
-
+            <Button
+              onClick={handleStartChat}
+              className="w-full bg-gradient-to-r from-indigo-500 to-cyan-600 hover:from-indigo-600 hover:to-cyan-700"
+              size="lg"
+            >
+              <MessageSquare className="w-5 h-5 mr-2" />
+              Start Chat
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
             
             <p className="text-sm text-gray-500 mt-3">
               ~Open-ended • Free conversation

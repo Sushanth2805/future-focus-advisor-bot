@@ -1,9 +1,10 @@
 
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
+import { AuthContext } from '@/components/AuthProvider';
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
@@ -11,8 +12,6 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   loading: boolean;
 }
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);

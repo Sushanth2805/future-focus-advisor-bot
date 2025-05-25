@@ -8,17 +8,14 @@ interface Message {
   content: string;
   sender: 'user' | 'ai';
   timestamp: Date;
-  audioContent?: string;
 }
 
 interface MessageListProps {
   messages: Message[];
   isLoading: boolean;
-  currentlyPlaying: string | null;
-  onPlayAudio: (audioContent: string, messageId: string) => void;
 }
 
-const MessageList = ({ messages, isLoading, currentlyPlaying, onPlayAudio }: MessageListProps) => {
+const MessageList = ({ messages, isLoading }: MessageListProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -36,8 +33,6 @@ const MessageList = ({ messages, isLoading, currentlyPlaying, onPlayAudio }: Mes
           <MessageItem
             key={message.id}
             message={message}
-            currentlyPlaying={currentlyPlaying}
-            onPlayAudio={onPlayAudio}
           />
         ))}
         {isLoading && <LoadingMessage />}

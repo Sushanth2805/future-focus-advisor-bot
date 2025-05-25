@@ -1,24 +1,20 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { User, Volume2, VolumeX } from 'lucide-react';
+import { User } from 'lucide-react';
 
 interface Message {
   id: string;
   content: string;
   sender: 'user' | 'ai';
   timestamp: Date;
-  audioContent?: string;
 }
 
 interface MessageItemProps {
   message: Message;
-  currentlyPlaying: string | null;
-  onPlayAudio: (audioContent: string, messageId: string) => void;
 }
 
-const MessageItem = ({ message, currentlyPlaying, onPlayAudio }: MessageItemProps) => {
+const MessageItem = ({ message }: MessageItemProps) => {
   return (
     <div className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
       <div className={`flex space-x-3 max-w-[80%] ${message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
@@ -41,27 +37,11 @@ const MessageItem = ({ message, currentlyPlaying, onPlayAudio }: MessageItemProp
             : 'bg-white/80 backdrop-blur-sm'
         }`}>
           <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-          <div className="flex items-center justify-between mt-2">
-            <p className={`text-xs ${
-              message.sender === 'user' ? 'text-blue-100' : 'text-gray-500'
-            }`}>
-              {message.timestamp.toLocaleTimeString()}
-            </p>
-            {message.sender === 'ai' && message.audioContent && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onPlayAudio(message.audioContent!, message.id)}
-                className="p-1 h-6 w-6"
-              >
-                {currentlyPlaying === message.id ? (
-                  <VolumeX className="w-3 h-3" />
-                ) : (
-                  <Volume2 className="w-3 h-3" />
-                )}
-              </Button>
-            )}
-          </div>
+          <p className={`text-xs mt-2 ${
+            message.sender === 'user' ? 'text-blue-100' : 'text-gray-500'
+          }`}>
+            {message.timestamp.toLocaleTimeString()}
+          </p>
         </Card>
       </div>
     </div>

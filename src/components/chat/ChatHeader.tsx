@@ -1,15 +1,13 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 interface ChatHeaderProps {
   onBack: () => void;
-  voiceEnabled: boolean;
-  onVoiceToggle: () => void;
 }
 
-const ChatHeader = ({ onBack, voiceEnabled, onVoiceToggle }: ChatHeaderProps) => {
+const ChatHeader = ({ onBack }: ChatHeaderProps) => {
   return (
     <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 px-4 py-4">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -35,16 +33,6 @@ const ChatHeader = ({ onBack, voiceEnabled, onVoiceToggle }: ChatHeaderProps) =>
             </div>
           </div>
         </div>
-        
-        <Button
-          variant={voiceEnabled ? "default" : "outline"}
-          size="sm"
-          onClick={onVoiceToggle}
-          className="flex items-center space-x-2"
-        >
-          {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-          <span>{voiceEnabled ? 'Voice On' : 'Voice Off'}</span>
-        </Button>
       </div>
     </div>
   );

@@ -4,14 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 import ChatHeader from './chat/ChatHeader';
 import MessageList from './chat/MessageList';
 import ChatInput from './chat/ChatInput';
-import AudioPlayer from './chat/AudioPlayer';
 
 interface Message {
   id: string;
   content: string;
   sender: 'user' | 'ai';
   timestamp: Date;
-  audioContent?: string;
 }
 
 interface ChatInterfaceProps {
@@ -29,8 +27,6 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
-  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
   const [sessionId] = useState(() => crypto.randomUUID());
 
   // Save chat session whenever messages change
@@ -58,32 +54,6 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
     }
   };
 
-  const handlePlayAudio = (audioContent: string, messageId: string) => {
-    if (currentlyPlaying === messageId) {
-      // Stop current audio
-      setCurrentlyPlaying(null);
-      return;
-    }
-
-    try {
-      const audioBlob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], {
-        type: 'audio/mp3'
-      });
-      const audioUrl = URL.createObjectURL(audioBlob);
-      
-      const audio = new Audio(audioUrl);
-      audio.play();
-      setCurrentlyPlaying(messageId);
-      
-      audio.onended = () => {
-        setCurrentlyPlaying(null);
-        URL.revokeObjectURL(audioUrl);
-      };
-    } catch (error) {
-      console.error('Error playing audio:', error);
-    }
-  };
-
   const sendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
 
@@ -106,7 +76,7 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
             role: msg.sender === 'user' ? 'user' : 'model',
             parts: [{ text: msg.content }]
           })),
-          generateAudio: voiceEnabled
+          generateAudio: false
         },
       });
 
@@ -119,8 +89,7 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
         id: (Date.now() + 1).toString(),
         content: data.response || "I'm sorry, I couldn't generate a response. Please try again.",
         sender: 'ai',
-        timestamp: new Date(),
-        audioContent: data.audioContent
+        timestamp: new Date()
       };
 
       setMessages(prev => [...prev, aiMessage]);
@@ -145,23 +114,13 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
     }
   };
 
-  const handleAudioEnd = () => {
-    setCurrentlyPlaying(null);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 flex flex-col">
-      <ChatHeader 
-        onBack={onBack}
-        voiceEnabled={voiceEnabled}
-        onVoiceToggle={() => setVoiceEnabled(!voiceEnabled)}
-      />
+      <ChatHeader onBack={onBack} />
       
       <MessageList
         messages={messages}
         isLoading={isLoading}
-        currentlyPlaying={currentlyPlaying}
-        onPlayAudio={handlePlayAudio}
       />
       
       <ChatInput
@@ -171,8 +130,6 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
         onKeyPress={handleKeyPress}
         disabled={isLoading}
       />
-
-      <AudioPlayer onAudioEnd={handleAudioEnd} />
     </div>
   );
 };

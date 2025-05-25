@@ -3,18 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
-import { MessageCircle, User, BarChart3, BookOpen, LogOut, RefreshCw } from 'lucide-react';
+import { MessageCircle, User, BarChart3, BookOpen, LogOut } from 'lucide-react';
 import ChatInterface from './ChatInterface';
 import CareerAssessmentModal from './CareerAssessmentModal';
 import LearningResourcesModal from './LearningResourcesModal';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
-
-interface UserStats {
-  assessmentCount: number;
-  chatSessionCount: number;
-  resourcesViewedCount: number;
-}
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
@@ -22,83 +14,17 @@ const Dashboard = () => {
   const [showAssessment, setShowAssessment] = useState(false);
   const [showResources, setShowResources] = useState(false);
   const [assessmentResults, setAssessmentResults] = useState<any>(null);
-  const [userStats, setUserStats] = useState<UserStats>({
-    assessmentCount: 0,
-    chatSessionCount: 0,
-    resourcesViewedCount: 0
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-  const { toast } = useToast();
 
   useEffect(() => {
-    if (user) {
-      fetchUserData();
+    // Load assessment results from localStorage on component mount
+    const savedResults = localStorage.getItem('assessmentResults');
+    if (savedResults) {
+      setAssessmentResults(JSON.parse(savedResults));
     }
-  }, [user]);
-
-  const fetchUserData = async () => {
-    setIsLoading(true);
-    setHasError(false);
-    
-    try {
-      console.log('Fetching user data...');
-      const { data, error } = await supabase.functions.invoke('get-user-data', {
-        body: {},
-      });
-
-      if (error) {
-        console.error('Supabase function error:', error);
-        setHasError(true);
-        toast({
-          title: "Connection Issue",
-          description: "Unable to load your data. Using offline mode.",
-          variant: "destructive",
-        });
-        
-        // Fallback to localStorage for backwards compatibility
-        const savedResults = localStorage.getItem('assessmentResults');
-        if (savedResults) {
-          setAssessmentResults(JSON.parse(savedResults));
-        }
-        return;
-      }
-
-      console.log('User data received:', data);
-      
-      if (data.latestAssessment) {
-        setAssessmentResults(data.latestAssessment);
-      }
-      
-      setUserStats(data.stats || {
-        assessmentCount: 0,
-        chatSessionCount: 0,
-        resourcesViewedCount: 0
-      });
-      
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      setHasError(true);
-      
-      // Fallback to localStorage for backwards compatibility
-      const savedResults = localStorage.getItem('assessmentResults');
-      if (savedResults) {
-        setAssessmentResults(JSON.parse(savedResults));
-      }
-      
-      toast({
-        title: "Offline Mode",
-        description: "Running in offline mode. Some features may be limited.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, []);
 
   const handleAssessmentComplete = (results: any) => {
     setAssessmentResults(results);
-    // Refresh user stats after assessment completion
-    fetchUserData();
   };
 
   const handleSignOut = async () => {
@@ -107,10 +33,6 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error signing out:', error);
     }
-  };
-
-  const handleRefresh = () => {
-    fetchUserData();
   };
 
   if (showChat) {
@@ -132,41 +54,20 @@ const Dashboard = () => {
                 <p className="text-sm text-gray-600">{user?.email}</p>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              {hasError && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleRefresh}
-                  className="flex items-center space-x-2"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  <span>Retry</span>
-                </Button>
-              )}
-              <Button 
-                variant="outline" 
-                onClick={handleSignOut}
-                className="flex items-center space-x-2"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Sign Out</span>
-              </Button>
-            </div>
+            <Button 
+              variant="outline" 
+              onClick={handleSignOut}
+              className="flex items-center space-x-2"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Sign Out</span>
+            </Button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {hasError && (
-          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-yellow-800">
-              <strong>Connection Issue:</strong> Unable to load data from server. You're in offline mode with limited functionality.
-            </p>
-          </div>
-        )}
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           
           {/* AI Chat Card */}
@@ -247,21 +148,15 @@ const Dashboard = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Journey</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6 text-center">
-              <div className="text-3xl font-bold text-blue-600">
-                {isLoading ? "..." : userStats.assessmentCount}
-              </div>
+              <div className="text-3xl font-bold text-blue-600">{assessmentResults ? "1" : "0"}</div>
               <div className="text-gray-600">Assessments Taken</div>
             </div>
             <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6 text-center">
-              <div className="text-3xl font-bold text-green-600">
-                {isLoading ? "..." : userStats.chatSessionCount}
-              </div>
+              <div className="text-3xl font-bold text-green-600">0</div>
               <div className="text-gray-600">Chat Sessions</div>
             </div>
             <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6 text-center">
-              <div className="text-3xl font-bold text-purple-600">
-                {isLoading ? "..." : userStats.resourcesViewedCount}
-              </div>
+              <div className="text-3xl font-bold text-purple-600">0</div>
               <div className="text-gray-600">Resources Viewed</div>
             </div>
           </div>

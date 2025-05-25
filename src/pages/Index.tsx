@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AuthProvider from '@/components/AuthProvider';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,8 +6,10 @@ import Dashboard from '@/components/Dashboard';
 import VoiceAssessment from '@/components/VoiceAssessment';
 import OptionAssessment from '@/components/OptionAssessment';
 import CareerResults from '@/components/CareerResults';
+import ChatLandingSection from '@/components/ChatLandingSection';
+import ChatInterface from '@/components/ChatInterface';
 
-type AppMode = 'welcome' | 'dashboard' | 'voice-assessment' | 'option-assessment' | 'results';
+type AppMode = 'welcome' | 'dashboard' | 'voice-assessment' | 'option-assessment' | 'results' | 'chat-landing' | 'chat';
 
 const AppContent = () => {
   const { user, loading } = useAuth();
@@ -17,6 +18,8 @@ const AppContent = () => {
 
   const handleStartVoice = () => setCurrentMode('voice-assessment');
   const handleStartOptions = () => setCurrentMode('option-assessment');
+  const handleStartChatLanding = () => setCurrentMode('chat-landing');
+  const handleStartChat = () => setCurrentMode('chat');
   
   const handleAssessmentComplete = (results: Record<string, any>) => {
     setAssessmentResults(results);
@@ -52,6 +55,20 @@ const AppContent = () => {
         <WelcomeScreen 
           onStartVoice={handleStartVoice}
           onStartOptions={handleStartOptions}
+          onStartChatLanding={handleStartChatLanding}
+        />
+      )}
+
+      {currentMode === 'chat-landing' && (
+        <ChatLandingSection
+          onStartChat={handleStartChat}
+          onBack={handleBackToWelcome}
+        />
+      )}
+
+      {currentMode === 'chat' && (
+        <ChatInterface
+          onBack={handleBackToWelcome}
         />
       )}
       

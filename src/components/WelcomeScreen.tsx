@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -9,22 +8,25 @@ import AuthModal from './AuthModal';
 interface WelcomeScreenProps {
   onStartVoice: () => void;
   onStartOptions: () => void;
+  onStartChatLanding: () => void;
 }
 
-const WelcomeScreen = ({ onStartVoice, onStartOptions }: WelcomeScreenProps) => {
+const WelcomeScreen = ({ onStartVoice, onStartOptions, onStartChatLanding }: WelcomeScreenProps) => {
   const { user } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
 
-  const handleStartAssessment = (mode: 'voice' | 'options') => {
-    if (!user) {
+  const handleStartAssessment = (mode: 'voice' | 'options' | 'chat') => {
+    if (!user && mode !== 'chat') {
       setShowAuth(true);
       return;
     }
     
     if (mode === 'voice') {
       onStartVoice();
-    } else {
+    } else if (mode === 'options') {
       onStartOptions();
+    } else if (mode === 'chat') {
+      onStartChatLanding();
     }
   };
 
@@ -49,7 +51,7 @@ const WelcomeScreen = ({ onStartVoice, onStartOptions }: WelcomeScreenProps) => 
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-8 max-w-2xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 mb-8 max-w-3xl mx-auto">
           <Card 
             className="p-8 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 cursor-pointer bg-white/80 backdrop-blur-sm border-0"
             onClick={() => handleStartAssessment('voice')}
@@ -101,6 +103,33 @@ const WelcomeScreen = ({ onStartVoice, onStartOptions }: WelcomeScreenProps) => 
             
             <p className="text-sm text-gray-500 mt-3">
               ~2 minutes • Multiple choice
+            </p>
+          </Card>
+
+          <Card 
+            className="p-8 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 cursor-pointer bg-white/80 backdrop-blur-sm border-0"
+            onClick={() => handleStartAssessment('chat')}
+          >
+            <div className="w-16 h-16 bg-gradient-to-r from-indigo-500 to-cyan-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <MessageSquare className="w-8 h-8 text-white" />
+            </div>
+            
+            <h3 className="text-2xl font-bold mb-4">Start Chat</h3>
+            <p className="text-gray-600 mb-6">
+              Have an open conversation with our AI career counselor. Ask questions freely.
+            </p>
+            
+            <Button 
+              className="w-full bg-gradient-to-r from-indigo-500 to-cyan-600 hover:from-indigo-600 hover:to-cyan-700"
+              size="lg"
+            >
+              <MessageSquare className="w-5 h-5 mr-2" />
+              Start Chat
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+            
+            <p className="text-sm text-gray-500 mt-3">
+              ~Open-ended • Free conversation
             </p>
           </Card>
         </div>

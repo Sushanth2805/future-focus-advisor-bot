@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +9,7 @@ interface CareerAssessmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   userName?: string;
+  onAssessmentComplete?: (results: any) => void;
 }
 
 const assessmentQuestions = [
@@ -55,7 +55,7 @@ const assessmentQuestions = [
   }
 ];
 
-const CareerAssessmentModal = ({ isOpen, onClose, userName }: CareerAssessmentModalProps) => {
+const CareerAssessmentModal = ({ isOpen, onClose, userName, onAssessmentComplete }: CareerAssessmentModalProps) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [isComplete, setIsComplete] = useState(false);
@@ -67,23 +67,36 @@ const CareerAssessmentModal = ({ isOpen, onClose, userName }: CareerAssessmentMo
     if (currentQuestion < assessmentQuestions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
+      const results = {
+        answers: newAnswers,
+        careerPath: getCareerRecommendation(newAnswers),
+        timestamp: new Date().toISOString()
+      };
+      
+      // Store results in localStorage for persistence
+      localStorage.setItem('assessmentResults', JSON.stringify(results));
+      
+      if (onAssessmentComplete) {
+        onAssessmentComplete(results);
+      }
+      
       setIsComplete(true);
     }
   };
 
-  const getCareerRecommendation = () => {
+  const getCareerRecommendation = (assessmentAnswers = answers) => {
     // Simple logic to provide personalized recommendations
-    const skillPreference = answers[2];
-    const industryPreference = answers[4];
+    const skillPreference = assessmentAnswers[2];
+    const industryPreference = assessmentAnswers[4];
     
     if (skillPreference?.includes('Technical') && industryPreference?.includes('Technology')) {
-      return "Software Developer or Data Scientist";
+      return "Software Developer";
     } else if (skillPreference?.includes('Creative') && industryPreference?.includes('Creative')) {
-      return "UX/UI Designer or Content Creator";
+      return "UX/UI Designer";
     } else if (skillPreference?.includes('Leadership') && industryPreference?.includes('Business')) {
-      return "Project Manager or Business Analyst";
+      return "Project Manager";
     } else {
-      return "Marketing Specialist or Customer Success Manager";
+      return "Marketing Specialist";
     }
   };
 

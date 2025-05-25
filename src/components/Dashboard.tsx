@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
@@ -13,6 +13,19 @@ const Dashboard = () => {
   const [showChat, setShowChat] = useState(false);
   const [showAssessment, setShowAssessment] = useState(false);
   const [showResources, setShowResources] = useState(false);
+  const [assessmentResults, setAssessmentResults] = useState<any>(null);
+
+  useEffect(() => {
+    // Load assessment results from localStorage on component mount
+    const savedResults = localStorage.getItem('assessmentResults');
+    if (savedResults) {
+      setAssessmentResults(JSON.parse(savedResults));
+    }
+  }, []);
+
+  const handleAssessmentComplete = (results: any) => {
+    setAssessmentResults(results);
+  };
 
   const handleSignOut = async () => {
     try {
@@ -89,14 +102,17 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent className="text-center">
               <p className="text-gray-600 mb-6">
-                Take our comprehensive assessment to discover your ideal career path
+                {assessmentResults 
+                  ? "Retake our assessment to update your career recommendations"
+                  : "Take our comprehensive assessment to discover your ideal career path"
+                }
               </p>
               <Button 
                 onClick={() => setShowAssessment(true)}
                 className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
                 size="lg"
               >
-                Take Assessment
+                {assessmentResults ? "Retake Assessment" : "Take Assessment"}
               </Button>
             </CardContent>
           </Card>
@@ -111,7 +127,10 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent className="text-center">
               <p className="text-gray-600 mb-6">
-                Access curated courses and materials for your career development
+                {assessmentResults 
+                  ? `Access curated resources for ${assessmentResults.careerPath} and career development`
+                  : "Access curated courses and materials for your career development"
+                }
               </p>
               <Button 
                 onClick={() => setShowResources(true)}
@@ -129,7 +148,7 @@ const Dashboard = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Journey</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6 text-center">
-              <div className="text-3xl font-bold text-blue-600">0</div>
+              <div className="text-3xl font-bold text-blue-600">{assessmentResults ? "1" : "0"}</div>
               <div className="text-gray-600">Assessments Taken</div>
             </div>
             <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6 text-center">
@@ -149,12 +168,14 @@ const Dashboard = () => {
         isOpen={showAssessment} 
         onClose={() => setShowAssessment(false)}
         userName={user?.email}
+        onAssessmentComplete={handleAssessmentComplete}
       />
       
       <LearningResourcesModal 
         isOpen={showResources} 
         onClose={() => setShowResources(false)}
         userName={user?.email}
+        assessmentResults={assessmentResults}
       />
     </div>
   );

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Send, Bot, User } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
   id: string;
@@ -52,29 +53,24 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('chat', {
+        body: {
           message: inputValue,
           conversationHistory: messages.map(msg => ({
             role: msg.sender === 'user' ? 'user' : 'model',
             parts: [{ text: msg.content }]
           }))
-        }),
+        },
       });
 
-      if (!response.ok) {
+      if (error) {
+        console.error('Supabase function error:', error);
         throw new Error('Failed to get AI response');
       }
 
-      const data = await response.json();
-      
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: data.response,
+        content: data.response || "I'm sorry, I couldn't generate a response. Please try again.",
         sender: 'ai',
         timestamp: new Date()
       };

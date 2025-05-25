@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { ChevronRight, CheckCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
 
 interface CareerAssessmentModalProps {
   isOpen: boolean;
@@ -59,28 +61,63 @@ const CareerAssessmentModal = ({ isOpen, onClose, userName, onAssessmentComplete
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [isComplete, setIsComplete] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
-  const handleAnswer = (answer: string) => {
+  const handleAnswer = async (answer: string) => {
     const newAnswers = { ...answers, [assessmentQuestions[currentQuestion].id]: answer };
     setAnswers(newAnswers);
 
     if (currentQuestion < assessmentQuestions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
-      const results = {
-        answers: newAnswers,
-        careerPath: getCareerRecommendation(newAnswers),
-        timestamp: new Date().toISOString()
-      };
-      
-      // Store results in localStorage for persistence
-      localStorage.setItem('assessmentResults', JSON.stringify(results));
-      
-      if (onAssessmentComplete) {
-        onAssessmentComplete(results);
+      setIsLoading(true);
+      try {
+        const careerPath = getCareerRecommendation(newAnswers);
+        
+        const { data, error } = await supabase.functions.invoke('save-assessment', {
+          body: {
+            answers: newAnswers,
+            careerPath
+          },
+        });
+
+        if (error) {
+          console.error('Error saving assessment:', error);
+          toast({
+            title: "Error",
+            description: "Failed to save assessment results. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const results = {
+          answers: newAnswers,
+          careerPath,
+          timestamp: new Date().toISOString(),
+          assessmentId: data.assessmentId
+        };
+        
+        if (onAssessmentComplete) {
+          onAssessmentComplete(results);
+        }
+        
+        setIsComplete(true);
+        toast({
+          title: "Assessment Complete!",
+          description: "Your career assessment has been saved successfully.",
+        });
+      } catch (error) {
+        console.error('Error completing assessment:', error);
+        toast({
+          title: "Error",
+          description: "Something went wrong. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsComplete(true);
     }
   };
 
@@ -140,6 +177,7 @@ const CareerAssessmentModal = ({ isOpen, onClose, userName, onAssessmentComplete
                     variant="outline"
                     className="w-full justify-between text-left h-auto p-4"
                     onClick={() => handleAnswer(option)}
+                    disabled={isLoading}
                   >
                     <span>{option}</span>
                     <ChevronRight className="w-4 h-4" />

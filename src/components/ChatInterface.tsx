@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,6 +30,7 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
+  const [sessionId] = useState(() => crypto.randomUUID());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -41,6 +41,31 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Save chat session whenever messages change
+  useEffect(() => {
+    if (messages.length > 1) { // Don't save just the initial message
+      saveChatSession();
+    }
+  }, [messages]);
+
+  const saveChatSession = async () => {
+    try {
+      await supabase.functions.invoke('save-chat-session', {
+        body: {
+          sessionId,
+          messages: messages.map(msg => ({
+            id: msg.id,
+            content: msg.content,
+            sender: msg.sender,
+            timestamp: msg.timestamp.toISOString()
+          }))
+        },
+      });
+    } catch (error) {
+      console.error('Error saving chat session:', error);
+    }
+  };
 
   const playAudio = (audioContent: string, messageId: string) => {
     if (currentlyPlaying === messageId) {

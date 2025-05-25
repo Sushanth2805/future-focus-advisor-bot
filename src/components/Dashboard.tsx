@@ -7,6 +7,14 @@ import { MessageCircle, User, BarChart3, BookOpen, LogOut } from 'lucide-react';
 import ChatInterface from './ChatInterface';
 import CareerAssessmentModal from './CareerAssessmentModal';
 import LearningResourcesModal from './LearningResourcesModal';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
+
+interface UserStats {
+  assessmentCount: number;
+  chatSessionCount: number;
+  resourcesViewedCount: number;
+}
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
@@ -14,17 +22,57 @@ const Dashboard = () => {
   const [showAssessment, setShowAssessment] = useState(false);
   const [showResources, setShowResources] = useState(false);
   const [assessmentResults, setAssessmentResults] = useState<any>(null);
+  const [userStats, setUserStats] = useState<UserStats>({
+    assessmentCount: 0,
+    chatSessionCount: 0,
+    resourcesViewedCount: 0
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Load assessment results from localStorage on component mount
-    const savedResults = localStorage.getItem('assessmentResults');
-    if (savedResults) {
-      setAssessmentResults(JSON.parse(savedResults));
+    if (user) {
+      fetchUserData();
     }
-  }, []);
+  }, [user]);
+
+  const fetchUserData = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('get-user-data', {
+        body: {},
+      });
+
+      if (error) {
+        console.error('Error fetching user data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load your data. Please refresh the page.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data.latestAssessment) {
+        setAssessmentResults(data.latestAssessment);
+      }
+      
+      setUserStats(data.stats);
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      // Fallback to localStorage for backwards compatibility
+      const savedResults = localStorage.getItem('assessmentResults');
+      if (savedResults) {
+        setAssessmentResults(JSON.parse(savedResults));
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleAssessmentComplete = (results: any) => {
     setAssessmentResults(results);
+    // Refresh user stats after assessment completion
+    fetchUserData();
   };
 
   const handleSignOut = async () => {
@@ -148,15 +196,21 @@ const Dashboard = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Journey</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6 text-center">
-              <div className="text-3xl font-bold text-blue-600">{assessmentResults ? "1" : "0"}</div>
+              <div className="text-3xl font-bold text-blue-600">
+                {isLoading ? "..." : userStats.assessmentCount}
+              </div>
               <div className="text-gray-600">Assessments Taken</div>
             </div>
             <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6 text-center">
-              <div className="text-3xl font-bold text-green-600">0</div>
+              <div className="text-3xl font-bold text-green-600">
+                {isLoading ? "..." : userStats.chatSessionCount}
+              </div>
               <div className="text-gray-600">Chat Sessions</div>
             </div>
             <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6 text-center">
-              <div className="text-3xl font-bold text-purple-600">0</div>
+              <div className="text-3xl font-bold text-purple-600">
+                {isLoading ? "..." : userStats.resourcesViewedCount}
+              </div>
               <div className="text-gray-600">Resources Viewed</div>
             </div>
           </div>

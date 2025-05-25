@@ -1,10 +1,10 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Card } from '@/components/ui/card';
-import { ArrowLeft, Send, User, Volume2, VolumeX } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import ChatHeader from './chat/ChatHeader';
+import MessageList from './chat/MessageList';
+import ChatInput from './chat/ChatInput';
+import AudioPlayer from './chat/AudioPlayer';
 
 interface Message {
   id: string;
@@ -32,16 +32,6 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
   const [sessionId] = useState(() => crypto.randomUUID());
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
 
   // Save chat session whenever messages change
   useEffect(() => {
@@ -68,13 +58,9 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
     }
   };
 
-  const playAudio = (audioContent: string, messageId: string) => {
+  const handlePlayAudio = (audioContent: string, messageId: string) => {
     if (currentlyPlaying === messageId) {
       // Stop current audio
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
       setCurrentlyPlaying(null);
       return;
     }
@@ -85,16 +71,14 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
       });
       const audioUrl = URL.createObjectURL(audioBlob);
       
-      if (audioRef.current) {
-        audioRef.current.src = audioUrl;
-        audioRef.current.play();
-        setCurrentlyPlaying(messageId);
-        
-        audioRef.current.onended = () => {
-          setCurrentlyPlaying(null);
-          URL.revokeObjectURL(audioUrl);
-        };
-      }
+      const audio = new Audio(audioUrl);
+      audio.play();
+      setCurrentlyPlaying(messageId);
+      
+      audio.onended = () => {
+        setCurrentlyPlaying(null);
+        URL.revokeObjectURL(audioUrl);
+      };
     } catch (error) {
       console.error('Error playing audio:', error);
     }
@@ -161,150 +145,34 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
     }
   };
 
+  const handleAudioEnd = () => {
+    setCurrentlyPlaying(null);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 flex flex-col">
-      {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 px-4 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={onBack}
-              className="flex items-center space-x-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Dashboard</span>
-            </Button>
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden">
-                <img 
-                  src="/lovable-uploads/3812dacf-871f-417e-81f7-64a9b39a3044.png" 
-                  alt="AI Counselor" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div>
-                <h1 className="text-lg font-semibold">AI Career Counselor</h1>
-                <p className="text-sm text-gray-600">Online</p>
-              </div>
-            </div>
-          </div>
-          
-          <Button
-            variant={voiceEnabled ? "default" : "outline"}
-            size="sm"
-            onClick={() => setVoiceEnabled(!voiceEnabled)}
-            className="flex items-center space-x-2"
-          >
-            {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            <span>{voiceEnabled ? 'Voice On' : 'Voice Off'}</span>
-          </Button>
-        </div>
-      </div>
+      <ChatHeader 
+        onBack={onBack}
+        voiceEnabled={voiceEnabled}
+        onVoiceToggle={() => setVoiceEnabled(!voiceEnabled)}
+      />
+      
+      <MessageList
+        messages={messages}
+        isLoading={isLoading}
+        currentlyPlaying={currentlyPlaying}
+        onPlayAudio={handlePlayAudio}
+      />
+      
+      <ChatInput
+        value={inputValue}
+        onChange={setInputValue}
+        onSend={sendMessage}
+        onKeyPress={handleKeyPress}
+        disabled={isLoading}
+      />
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className={`flex space-x-3 max-w-[80%] ${message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden ${
-                  message.sender === 'user' 
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-600' 
-                    : ''
-                }`}>
-                  {message.sender === 'user' ? (
-                    <User className="w-5 h-5 text-white" />
-                  ) : (
-                    <img 
-                      src="/lovable-uploads/3812dacf-871f-417e-81f7-64a9b39a3044.png" 
-                      alt="AI" 
-                      className="w-full h-full object-cover"
-                    />
-                  )}
-                </div>
-                <Card className={`p-4 ${
-                  message.sender === 'user' 
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
-                    : 'bg-white/80 backdrop-blur-sm'
-                }`}>
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <p className={`text-xs ${
-                      message.sender === 'user' ? 'text-blue-100' : 'text-gray-500'
-                    }`}>
-                      {message.timestamp.toLocaleTimeString()}
-                    </p>
-                    {message.sender === 'ai' && message.audioContent && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => playAudio(message.audioContent!, message.id)}
-                        className="p-1 h-6 w-6"
-                      >
-                        {currentlyPlaying === message.id ? (
-                          <VolumeX className="w-3 h-3" />
-                        ) : (
-                          <Volume2 className="w-3 h-3" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </Card>
-              </div>
-            </div>
-          ))}
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="flex space-x-3 max-w-[80%]">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden">
-                  <img 
-                    src="/lovable-uploads/3812dacf-871f-417e-81f7-64a9b39a3044.png" 
-                    alt="AI" 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <Card className="p-4 bg-white/80 backdrop-blur-sm">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  </div>
-                </Card>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {/* Input */}
-      <div className="bg-white/80 backdrop-blur-sm border-t border-gray-200 px-4 py-4">
-        <div className="max-w-4xl mx-auto flex space-x-4">
-          <Textarea
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Ask me anything about careers, skills, or your professional journey..."
-            className="flex-1 min-h-[50px] max-h-[120px] resize-none"
-            disabled={isLoading}
-          />
-          <Button
-            onClick={sendMessage}
-            disabled={!inputValue.trim() || isLoading}
-            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
-            size="lg"
-          >
-            <Send className="w-5 h-5" />
-          </Button>
-        </div>
-      </div>
-
-      <audio ref={audioRef} className="hidden" />
+      <AudioPlayer onAudioEnd={handleAudioEnd} />
     </div>
   );
 };

@@ -1,8 +1,9 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Send, Bot, User, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeft, Send, User, Volume2, VolumeX } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
@@ -176,8 +177,12 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
               <span>Back to Dashboard</span>
             </Button>
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
-                <Bot className="w-5 h-5 text-white" />
+              <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden">
+                <img 
+                  src="/lovable-uploads/3812dacf-871f-417e-81f7-64a9b39a3044.png" 
+                  alt="AI Counselor" 
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div>
                 <h1 className="text-lg font-semibold">AI Career Counselor</h1>
@@ -207,15 +212,19 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
               className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div className={`flex space-x-3 max-w-[80%] ${message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden ${
                   message.sender === 'user' 
                     ? 'bg-gradient-to-r from-blue-500 to-purple-600' 
-                    : 'bg-gradient-to-r from-green-500 to-emerald-600'
+                    : ''
                 }`}>
                   {message.sender === 'user' ? (
                     <User className="w-5 h-5 text-white" />
                   ) : (
-                    <Bot className="w-5 h-5 text-white" />
+                    <img 
+                      src="/lovable-uploads/3812dacf-871f-417e-81f7-64a9b39a3044.png" 
+                      alt="AI" 
+                      className="w-full h-full object-cover"
+                    />
                   )}
                 </div>
                 <Card className={`p-4 ${
@@ -252,8 +261,12 @@ const ChatInterface = ({ onBack }: ChatInterfaceProps) => {
           {isLoading && (
             <div className="flex justify-start">
               <div className="flex space-x-3 max-w-[80%]">
-                <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-white" />
+                <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden">
+                  <img 
+                    src="/lovable-uploads/3812dacf-871f-417e-81f7-64a9b39a3044.png" 
+                    alt="AI" 
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <Card className="p-4 bg-white/80 backdrop-blur-sm">
                   <div className="flex space-x-1">

@@ -51,7 +51,14 @@ Deno.serve(async (req) => {
     try {
       client = new MongoClient()
       console.log('Attempting to connect to MongoDB...')
-      await client.connect(connectionString)
+      
+      // Add connection timeout
+      const connectPromise = client.connect(connectionString)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout')), 10000)
+      )
+      
+      await Promise.race([connectPromise, timeoutPromise])
       console.log('MongoDB connected successfully')
       
       const db = client.database('career_counselor')
@@ -59,47 +66,45 @@ Deno.serve(async (req) => {
       const chatSessions = db.collection('chat_sessions')
       const learningProgress = db.collection('learning_progress')
 
-      // Get latest assessment
-      try {
-        const latestAssessment = await assessments.findOne(
-          { userId: user.id },
-          { sort: { createdAt: -1 } }
-        )
-        if (latestAssessment) {
-          userData.latestAssessment = latestAssessment
-        }
+      // Get operations with timeout
+      const operations = [
+        assessments.findOne({ userId: user.id }, { sort: { createdAt: -1 } }),
+        assessments.countDocuments({ userId: user.id }),
+        chatSessions.countDocuments({ userId: user.id }),
+        learningProgress.countDocuments({ userId: user.id })
+      ]
+
+      const results = await Promise.allSettled(
+        operations.map(op => Promise.race([
+          op, 
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Operation timeout')), 5000))
+        ]))
+      )
+
+      // Process results safely
+      if (results[0].status === 'fulfilled' && results[0].value) {
+        userData.latestAssessment = results[0].value
         console.log('Latest assessment retrieved')
-      } catch (error) {
-        console.error('Error fetching latest assessment:', error)
       }
 
-      // Get stats with individual error handling
-      try {
-        const assessmentCount = await assessments.countDocuments({ userId: user.id })
-        userData.stats.assessmentCount = assessmentCount
-        console.log('Assessment count:', assessmentCount)
-      } catch (error) {
-        console.error('Error counting assessments:', error)
+      if (results[1].status === 'fulfilled') {
+        userData.stats.assessmentCount = results[1].value as number
+        console.log('Assessment count:', userData.stats.assessmentCount)
       }
 
-      try {
-        const chatSessionCount = await chatSessions.countDocuments({ userId: user.id })
-        userData.stats.chatSessionCount = chatSessionCount
-        console.log('Chat session count:', chatSessionCount)
-      } catch (error) {
-        console.error('Error counting chat sessions:', error)
+      if (results[2].status === 'fulfilled') {
+        userData.stats.chatSessionCount = results[2].value as number
+        console.log('Chat session count:', userData.stats.chatSessionCount)
       }
 
-      try {
-        const resourcesViewedCount = await learningProgress.countDocuments({ userId: user.id })
-        userData.stats.resourcesViewedCount = resourcesViewedCount
-        console.log('Resources viewed count:', resourcesViewedCount)
-      } catch (error) {
-        console.error('Error counting learning progress:', error)
+      if (results[3].status === 'fulfilled') {
+        userData.stats.resourcesViewedCount = results[3].value as number
+        console.log('Resources viewed count:', userData.stats.resourcesViewedCount)
       }
 
     } catch (mongoError) {
       console.error('MongoDB connection/operation error:', mongoError)
+      console.error('Error details:', mongoError.message)
       // Continue with fallback data instead of throwing
     } finally {
       if (client) {
@@ -118,6 +123,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('General error in get-user-data function:', error)
+    console.error('Error stack:', error.stack)
     
     // Return fallback data instead of error
     const fallbackData = {

@@ -42,7 +42,14 @@ Deno.serve(async (req) => {
     let client
     try {
       client = new MongoClient()
-      await client.connect(connectionString)
+      
+      // Add connection timeout
+      const connectPromise = client.connect(connectionString)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('MongoDB connection timeout')), 10000)
+      )
+      
+      await Promise.race([connectPromise, timeoutPromise])
       console.log('MongoDB connected for assessment save')
       
       const db = client.database('career_counselor')
@@ -58,7 +65,13 @@ Deno.serve(async (req) => {
         updatedAt: new Date()
       }
 
-      const result = await assessments.insertOne(assessmentData)
+      // Add operation timeout
+      const insertPromise = assessments.insertOne(assessmentData)
+      const operationTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Insert operation timeout')), 8000)
+      )
+      
+      const result = await Promise.race([insertPromise, operationTimeout])
       console.log('Assessment saved with ID:', result)
       
       return new Response(JSON.stringify({ 
@@ -71,7 +84,11 @@ Deno.serve(async (req) => {
 
     } catch (mongoError) {
       console.error('MongoDB error during assessment save:', mongoError)
-      return new Response(JSON.stringify({ error: 'Failed to save assessment to database' }), {
+      console.error('MongoDB error details:', mongoError.message)
+      return new Response(JSON.stringify({ 
+        error: 'Failed to save assessment to database',
+        details: mongoError.message 
+      }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -79,6 +96,7 @@ Deno.serve(async (req) => {
       if (client) {
         try {
           await client.close()
+          console.log('MongoDB connection closed after assessment save')
         } catch (closeError) {
           console.error('Error closing MongoDB connection:', closeError)
         }
@@ -87,7 +105,11 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Error saving assessment:', error)
-    return new Response(JSON.stringify({ error: 'Failed to save assessment' }), {
+    console.error('Error stack:', error.stack)
+    return new Response(JSON.stringify({ 
+      error: 'Failed to save assessment',
+      details: error.message 
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

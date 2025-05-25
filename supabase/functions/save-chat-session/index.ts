@@ -42,7 +42,14 @@ Deno.serve(async (req) => {
     let client
     try {
       client = new MongoClient()
-      await client.connect(connectionString)
+      
+      // Add connection timeout
+      const connectPromise = client.connect(connectionString)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('MongoDB connection timeout')), 10000)
+      )
+      
+      await Promise.race([connectPromise, timeoutPromise])
       console.log('MongoDB connected for chat session save')
       
       const db = client.database('career_counselor')
@@ -57,13 +64,17 @@ Deno.serve(async (req) => {
         updatedAt: new Date()
       }
 
-      // Upsert the session
-      await chatSessions.replaceOne(
+      // Add operation timeout
+      const replacePromise = chatSessions.replaceOne(
         { sessionId: sessionData.sessionId },
         sessionData,
         { upsert: true }
       )
+      const operationTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Replace operation timeout')), 8000)
+      )
       
+      await Promise.race([replacePromise, operationTimeout])
       console.log('Chat session saved:', sessionData.sessionId)
 
       return new Response(JSON.stringify({ 
@@ -75,7 +86,11 @@ Deno.serve(async (req) => {
 
     } catch (mongoError) {
       console.error('MongoDB error during chat session save:', mongoError)
-      return new Response(JSON.stringify({ error: 'Failed to save chat session to database' }), {
+      console.error('MongoDB error details:', mongoError.message)
+      return new Response(JSON.stringify({ 
+        error: 'Failed to save chat session to database',
+        details: mongoError.message 
+      }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -83,6 +98,7 @@ Deno.serve(async (req) => {
       if (client) {
         try {
           await client.close()
+          console.log('MongoDB connection closed after chat session save')
         } catch (closeError) {
           console.error('Error closing MongoDB connection:', closeError)
         }
@@ -91,7 +107,11 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Error saving chat session:', error)
-    return new Response(JSON.stringify({ error: 'Failed to save chat session' }), {
+    console.error('Error stack:', error.stack)
+    return new Response(JSON.stringify({ 
+      error: 'Failed to save chat session',
+      details: error.message 
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

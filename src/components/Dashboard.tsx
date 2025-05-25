@@ -5,10 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { MessageCircle, User, BarChart3, BookOpen, LogOut } from 'lucide-react';
 import ChatInterface from './ChatInterface';
+import CareerAssessmentModal from './CareerAssessmentModal';
+import LearningResourcesModal from './LearningResourcesModal';
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
   const [showChat, setShowChat] = useState(false);
+  const [showAssessment, setShowAssessment] = useState(false);
+  const [showResources, setShowResources] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -76,7 +80,7 @@ const Dashboard = () => {
           </Card>
 
           {/* Career Assessment Card */}
-          <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 bg-white/80 backdrop-blur-sm border-0">
+          <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer bg-white/80 backdrop-blur-sm border-0">
             <CardHeader className="text-center">
               <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <BarChart3 className="w-8 h-8 text-white" />
@@ -88,8 +92,8 @@ const Dashboard = () => {
                 Take our comprehensive assessment to discover your ideal career path
               </p>
               <Button 
-                variant="outline"
-                className="w-full"
+                onClick={() => setShowAssessment(true)}
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
                 size="lg"
               >
                 Take Assessment
@@ -98,7 +102,7 @@ const Dashboard = () => {
           </Card>
 
           {/* Learning Resources Card */}
-          <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 bg-white/80 backdrop-blur-sm border-0">
+          <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer bg-white/80 backdrop-blur-sm border-0">
             <CardHeader className="text-center">
               <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <BookOpen className="w-8 h-8 text-white" />
@@ -110,8 +114,8 @@ const Dashboard = () => {
                 Access curated courses and materials for your career development
               </p>
               <Button 
-                variant="outline"
-                className="w-full"
+                onClick={() => setShowResources(true)}
+                className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700"
                 size="lg"
               >
                 Explore Resources
@@ -139,6 +143,19 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      <CareerAssessmentModal 
+        isOpen={showAssessment} 
+        onClose={() => setShowAssessment(false)}
+        userName={user?.email}
+      />
+      
+      <LearningResourcesModal 
+        isOpen={showResources} 
+        onClose={() => setShowResources(false)}
+        userName={user?.email}
+      />
     </div>
   );
 };

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -8,15 +9,14 @@ import AuthModal from './AuthModal';
 interface WelcomeScreenProps {
   onStartVoice: () => void;
   onStartOptions: () => void;
-  onStartChatLanding: () => void;
 }
 
-const WelcomeScreen = ({ onStartVoice, onStartOptions, onStartChatLanding }: WelcomeScreenProps) => {
+const WelcomeScreen = ({ onStartVoice, onStartOptions }: WelcomeScreenProps) => {
   const { user } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
 
-  const handleStartAssessment = (mode: 'voice' | 'options' | 'chat') => {
-    if (!user && mode !== 'chat') {
+  const handleStartAssessment = (mode: 'voice' | 'options') => {
+    if (!user) {
       setShowAuth(true);
       return;
     }
@@ -25,9 +25,11 @@ const WelcomeScreen = ({ onStartVoice, onStartOptions, onStartChatLanding }: Wel
       onStartVoice();
     } else if (mode === 'options') {
       onStartOptions();
-    } else if (mode === 'chat') {
-      onStartChatLanding();
     }
+  };
+
+  const handleStartChat = () => {
+    window.open('https://dream2-theta.vercel.app/', '_blank');
   };
 
   return (
@@ -108,7 +110,7 @@ const WelcomeScreen = ({ onStartVoice, onStartOptions, onStartChatLanding }: Wel
 
           <Card 
             className="p-8 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 cursor-pointer bg-white/80 backdrop-blur-sm border-0"
-            onClick={() => handleStartAssessment('chat')}
+            onClick={handleStartChat}
           >
             <div className="w-16 h-16 bg-gradient-to-r from-indigo-500 to-cyan-600 rounded-full flex items-center justify-center mx-auto mb-6">
               <MessageSquare className="w-8 h-8 text-white" />
